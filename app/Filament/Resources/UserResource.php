@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources;
 
+
+use Illuminate\Http\Response;
+
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
@@ -15,7 +18,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 
+use App\Filament\Exports\UserExporter;
+
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ExportAction;
 
 class UserResource extends Resource
 {
@@ -71,8 +77,52 @@ class UserResource extends Resource
                 ->requiresConfirmation()
                 ->action(function ($record) {
                     $record->update(['status' => 'disabled']);
-                }),
+            }),
+
+            Action::make('voirShippingCompanies')
+            ->label('Voir les compagnies')
+            ->icon('heroicon-o-truck')
+            ->color('info')
+            ->url(fn ($record) => route('show_dataUser', $record->id))
+            ->openUrlInNewTab(),
         ])
+
+        ->headerActions([
+            //ExportAction::make()->exporter(UserExporter::class),
+
+            Action::make('export User')
+            ->label('Exporter CSV ')
+            ->action(function () {
+            $fileName = 'users_export_' . now()->format('Y_m_d_H_i_s') . '.csv';
+
+            $callback = function () {
+                $handle = fopen('php://output', 'w');
+                // L'ntet
+                fputcsv($handle, ['ID', 'Name', 'Email', 'Last Login', 'Status']);
+
+                \App\Models\User::chunk(100, function ($users) use ($handle) {
+                    foreach ($users as $user) {
+                        fputcsv($handle, [
+                            $user->id,
+                            $user->name,
+                            $user->email,
+                            $user->last_login,
+                            $user->status,
+                        ]);
+                    }
+                });
+
+                fclose($handle);
+            };
+
+            return response()->stream($callback, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => "attachment; filename=\"$fileName\"",
+            ]);
+        }),
+        ])
+
+
         ->bulkActions([
             Tables\Actions\BulkActionGroup::make([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -92,7 +142,6 @@ class UserResource extends Resource
         return [
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 }

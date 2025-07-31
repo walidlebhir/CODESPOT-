@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+use App\Models\shipping_token ;
+use App\Models\accounts ;
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -23,7 +26,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'last_login',  
+        'last_login',
         'status' ,
     ];
 
@@ -36,6 +39,18 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+
+    // Relation ENtre shipping companies et tokine
+    public function shippingTokens()
+    {
+        return $this->hasMany(shipping_token::class);
+    }
+
+    public function accounts()
+    {
+        return $this->hasMany(accounts::class);
+    }
 
     /**
      * Get the attributes that should be cast.
